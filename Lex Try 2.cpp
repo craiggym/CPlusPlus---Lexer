@@ -26,12 +26,14 @@ using namespace std;
 
 char charSeparator[13] = { ' ', '\n', '\t', ';', '{', '}', '[', ']', '(', ')', '.', ',', '\"' };
 char Operator[7] = { '=', '+', '-', '/', '*', '>', '<'};
+string Keywords[12] = { "if", "fi", "else", "return", "write", "read", "while", "integer", "boolean", "real", "true", "false" };
+string SpecialOps[] = { "==", "!=" };
 
 class Lexer {
 private:
 	//========================= LIBRARY ===================================//
 	// Libray of special strings and characters needed for char comparison //
-	string Keyword = "$$if else fi return write read while integer boolean real true false";
+
 	//string Separator = "\\n \\t ;{}[]().,'\"";
 
 	//=====================================================================//
@@ -63,6 +65,7 @@ public:
 	void OutputOperator();
 	bool CheckSeparator(char c);
 	bool CheckOperator(char c);
+	bool isKeyword(string lex);
 };
 
 /**********************************************************************
@@ -221,7 +224,8 @@ void Lexer::outputState(int n){
 		lexeme = "";
 		State = 0;
 		break;
-	case(4) : cout << left << setw(12) << "IDENTIFIER" << left << setw(7) << lexeme << endl;
+	case(4) : if (isKeyword(lexeme)) break;
+		cout << left << setw(12) << "IDENTIFIER" << left << setw(7) << lexeme << endl;
 		lexeme = "";
 		State = 1;
 		break;
@@ -249,15 +253,20 @@ bool Lexer::CheckSeparator(char c){
 }
 
 bool Lexer::CheckOperator(char c){
-	// Check if char is a operator //
-	char *temp;
-	temp = find(Operator, Operator + 7, c);
-	if (temp != Operator + 7){
-		isOperator = 1;
-		return 1;
-	}
-	else return 0;
-	temp = NULL;
+
+		// Check if char is a operator //
+		char *temp;
+		temp = find(Operator, Operator + 7, c);
+		if (temp != Operator + 7){
+			isOperator = 1;
+			return 1;
+		}
+		else if (c == '!'){
+			isOperator = 1;
+			return 1;
+		}
+		else return 0;
+		temp = NULL;
 }
 
 void Lexer::OutputSeparator(){
@@ -276,9 +285,46 @@ void Lexer::OutputSeparator(){
 }
 
 void Lexer::OutputOperator(){
-	cout << left << setw(12) << "OPERATOR" << left << setw(7) << tokenBU << endl;
-	tokenBU = NULL;
-	State = 1;
-	isOperator = 0;
-	lexeme = "";
+	// First check if the char belongs to a special operator //
+	if (tokenBU == '!' || tokenBU == '='){
+		char temp = f.get();
+		if (temp == '='){
+			cout << left << setw(12) << "OPERATOR" << tokenBU << temp << endl;
+			tokenBU = NULL;
+			State = 1;
+			isOperator = 0;
+			lexeme = "";
+		}
+		else{
+			if (tokenBU == '!'){
+				cout << "Unidentified token at " << tokenBU << endl;
+				lexeme = "";
+				State = 0;
+			}
+			f.unget();
+			cout << left << setw(12) << "OPERATOR" << left << setw(7) << tokenBU << endl;
+			tokenBU = NULL;
+			State = 1;
+			isOperator = 0;
+			lexeme = "";
+		}
+	}
+	else{
+		cout << left << setw(12) << "OPERATOR" << left << setw(7) << tokenBU << endl;
+		tokenBU = NULL;
+		State = 1;
+		isOperator = 0;
+		lexeme = "";
+	}
+}
+
+bool Lexer::isKeyword(string lex){
+	string *temp = find(Keywords, Keywords + 12, lex);
+	if (temp != Keywords + 12){
+		cout << left << setw(12) << "KEYWORD" << left << setw(7) << lex << endl;
+		lexeme = "";
+		State = 1;
+		return 1;
+	}
+	else return 0;
 }
