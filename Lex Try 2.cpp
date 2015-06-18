@@ -18,23 +18,32 @@
 #include <vector>
 #include <cctype>
 #include <iomanip>
+#include <algorithm>
+#include <iterator>
+#include <array>
+
 using namespace std;
 
+char charSeparator[13] = { ' ', '\n', '\t', ';', '{', '}', '[', ']', '(', ')', '.', ',', '\"' };
+char Operator[7] = { '=', '+', '-', '/', '*', '>', '<'};
+
 class Lexer {
-private: 
+private:
 	//========================= LIBRARY ===================================//
 	// Libray of special strings and characters needed for char comparison //
 	string Keyword = "$$if else fi return write read while integer boolean real true false";
-	string Operator = "!=-+*/=><==";
-	string Separator = " ;{}[]().,'\"";
+	//string Separator = "\\n \\t ;{}[]().,'\"";
+
 	//=====================================================================//
 
 	vector<vector<int>> Table;
 	ifstream f;
 	string fileDestination;
 	int State = 1;
-	string tokenBU;
+	char tokenBU;
 	string lexeme;
+
+	bool isSeparator, isOperator;
 
 public:
 	Lexer(){
@@ -50,6 +59,10 @@ public:
 	void Analyzer(ifstream &file);
 	int charToCol(char c);
 	void outputState(int n);
+	void OutputSeparator();
+	void OutputOperator();
+	bool CheckSeparator(char c);
+	bool CheckOperator(char c);
 };
 
 /**********************************************************************
@@ -58,6 +71,7 @@ Program starts here
 int main(){
 	cout << "Program: Lex\nProgrammer: Craig Marroquin\nClass: CPSC 323 Summer 2015\n\n" << endl;
 	Lexer RAT15SU;
+	
 
 	system("Pause");
 	return 0;
@@ -170,26 +184,36 @@ void Lexer::GetTxtFile(ifstream &file){
 void Lexer::Analyzer(ifstream &file){
 	char token;
 	int col;
+
 	while (!f.eof() && State != 0){
 		token = f.get();
-		col = charToCol(token);
 
-		State = Table[State][col];
-		outputState(State);
+		// The f.get() pulled a valid char //
+		if (token != -1){
+			col = charToCol(token);
 
-		tokenBU = lexeme += token;
+			State = Table[State][col];
+			outputState(State);
+			lexeme += tokenBU = token;
+
+			if (isSeparator == 1) OutputSeparator();
+			else if (isOperator == 1) OutputOperator();
+		}
+		else break;
 	}
 }
 
 // Takes char and determines which input to the machine //
 int Lexer::charToCol(char c){
-	if (isalpha(c)) return 0;
-	else if (isalnum(c)) return 1;
-	else if (c == '.') return 2;
-	else if (Separator.find(c)) return 3;
-	else return 3;
-
+	if (isalpha(c)) return 0;            // char is alphabetical //
+	else if (isalnum(c)) return 1;       // char is a number //
+	else if (c == '.') return 2;         // char is a '.' //
+	else {
+		if (CheckSeparator(c)) return 3;
+		else if (CheckOperator(c)) return 3;
+		else  return 4;
 	}
+}
 
 void Lexer::outputState(int n){
 	switch (n){
@@ -209,9 +233,52 @@ void Lexer::outputState(int n){
 		lexeme = "";
 		State = 1;
 		break;
-	case(9) : cout << left << setw(12) << "SEPARATOR" << left << setw(7) << lexeme << endl;
-		lexeme = "";
-		State = 1;
-		break;
 	}
+}
+
+bool Lexer::CheckSeparator(char c){
+	// Check if char is a separator //
+	char *temp;
+	temp = find(charSeparator, charSeparator + 13, c);
+	if (temp != charSeparator + 13){
+		isSeparator = 1;
+		return 1;
+	}
+	else return 0;
+	temp = NULL;
+}
+
+bool Lexer::CheckOperator(char c){
+	// Check if char is a operator //
+	char *temp;
+	temp = find(Operator, Operator + 7, c);
+	if (temp != Operator + 7){
+		isOperator = 1;
+		return 1;
+	}
+	else return 0;
+	temp = NULL;
+}
+
+void Lexer::OutputSeparator(){
+	string temp; // A temporary string to display the blank spacing that was used //
+
+	if (tokenBU == '\t') temp = "\\t";
+	else if (tokenBU == '\n') temp = "\\n";
+	else if (tokenBU == ' ') temp = "\' \'";
+	else temp = tokenBU;
+
+	cout << left << setw(12) << "SEPARATOR" << left << setw(7) << temp << endl;
+	tokenBU = NULL;
+	State = 1;
+	isSeparator = 0;
+	lexeme = "";
+}
+
+void Lexer::OutputOperator(){
+	cout << left << setw(12) << "OPERATOR" << left << setw(7) << tokenBU << endl;
+	tokenBU = NULL;
+	State = 1;
+	isOperator = 0;
+	lexeme = "";
 }
