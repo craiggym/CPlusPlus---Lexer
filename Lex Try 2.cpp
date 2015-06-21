@@ -44,7 +44,7 @@ private:
 	string lexeme;
 	char token;
 
-	bool isSeparator, isOperator;
+	bool isSeparator, isOperator, isID, isInt, isReal, tokReady;
 
 public:
 	Lexer(){
@@ -56,14 +56,16 @@ public:
 	void constructTable();
 	void displayTable();
 	void GetTxtFile(ifstream &file);
-	void GetToken();
+	void Parse(string theToken);
+	string GetToken();
 	int charToCol(char c);
-	void outputState(int n);
-	void OutputSeparator();
-	void OutputOperator();
+	string outputState(int n);
+	string OutputSeparator();
+	string OutputOperator();
 	bool CheckSeparator(char c);
 	bool CheckOperator(char c);
 	bool isKeyword(string lex);
+	bool isEOF();
 };
 
 /**********************************************************************
@@ -72,8 +74,9 @@ Program starts here
 int main(){
 	cout << "Program: Lex\nProgrammer: Craig Marroquin\nClass: CPSC 323 Summer 2015\n\n" << endl;
 	Lexer RAT15SU; // Takes a file from user input //
-	RAT15SU.GetToken();
-	
+	while (!RAT15SU.isEOF()){
+		RAT15SU.Parse(RAT15SU.GetToken());
+	}
 
 	system("Pause");
 	return 0;
@@ -183,27 +186,47 @@ void Lexer::GetTxtFile(ifstream &file){
 }
 
 // Tokenizes the text file //
-void Lexer::GetToken(){
+string Lexer::GetToken(){
 	int col;
+	string retToken;
 
 	while (!f.eof() && State != 0){
+		if (isSeparator == 1){
+			retToken = OutputSeparator();
+			return retToken;
+		}
+		else if (isOperator == 1){
+			retToken = OutputOperator();
+			return retToken;
+		}
+
 		token = f.get();
 		charCounter++;
 
 		col = charToCol(token);
 
 		State = Table[State][col];
-		outputState(State);
-		lexeme += tokenBU = token;
+		retToken = outputState(State);
+		if(tokReady != 1) lexeme += tokenBU = token;
+		else tokenBU = token;
 
-		if (isSeparator == 1) OutputSeparator();
-		else if (isOperator == 1) OutputOperator();
+	/*	if (isSeparator == 1){
+			tokReady = 1;
+			retToken = lexeme;
+		}
+		else if (isOperator == 1) {
+			tokReady = 1;
+			retToken = lexeme;
+		}*/
 
 		if (token == -1 && lexeme.size() == 0){
 			cout << "Unidentified token at line: " << lineCounter << " char: " << charCounter << endl;
+			retToken = "";
+			break;
 		}
-
+		if (tokReady == 1) break; // The token is ready to return //
 	}
+	return retToken;
 }
 
 // Takes char and determines the input to the machine //
@@ -220,30 +243,69 @@ int Lexer::charToCol(char c){
 }
 
 // outputState takes in a number from the results of a DFSM lookup and outputs the token and lexeme //
-void Lexer::outputState(int n){
+string Lexer::outputState(int n){
 	switch (n){
 	case(0) : cout << "Unidentified token at line: " << lineCounter << " char: " << charCounter << endl;
-		lexeme = "";
+		tokReady = 1;
+		lexeme = "\0";
 		State = 0;
-		break; 
+		return lexeme;
 	case(4) : if (isKeyword(lexeme)) break;
-		cout << left << setw(12) << "IDENTIFIER" << left << setw(7) << lexeme << endl;
-		lexeme = "";
+		//cout << left << setw(12) << "IDENTIFIER" << left << setw(7) << lexeme << endl;
+		tokReady = 1;
+		isID = 1;
+	//	lexeme = "";
 		State = 1;
-		break;
-	case(7) : cout << left << setw(12) << "INTEGER" << left << setw(7) << lexeme << endl;
-		lexeme = "";
+		return lexeme;
+	case(7) : //cout << left << setw(12) << "INTEGER" << left << setw(7) << lexeme << endl;
+		tokReady = 1;
+		isInt = 1;
+	//	lexeme = "";
 		State = 1;
-		break;
-	case(8) : cout << left << setw(12) << "REAL" << left << setw(7) << lexeme << endl;
-		lexeme = "";
+		return lexeme;
+	case(8) : //cout << left << setw(12) << "REAL" << left << setw(7) << lexeme << endl;
+		tokReady = 1;
+		isReal = 1;
+		//lexeme = "";
 		State = 1;
-		break;
+		return lexeme;
 	}
+	return "";
+}
+
+// DisplayToken gets passed a string when a full token has been reached (determined by a separator or operator)//
+void Lexer::Parse(string theToken){
+	string tokenID;
+	if (theToken == "\0") return;
+	else if (isID == 1) tokenID = "IDENTIFIER";
+	else if (isInt == 1) tokenID = "INTEGER";
+	else if (isReal == 1) tokenID = "REAL";
+	else if (isSeparator == 1) {
+		if (tokenBU == NULL){
+			isSeparator = 0;
+			lexeme = "";
+			State = 1;
+			return;
+		}
+		else{
+			tokenID = "SEPARATOR";
+			isSeparator = 0;
+		}
+	}
+	else if (isOperator == 1) {
+		tokenID = "OPERATOR";
+		isOperator = 0;
+	}
+
+	cout << left << setw(12) << tokenID << left << setw(7) << theToken << endl;
+	isID = isInt = isReal = 0;
+	lexeme = "";
+	State = 1;
+	tokReady = 0;
 }
 
 // CheckSeparator checks if the char is an separator. If it is, it triggers for the output //
-bool Lexer::CheckSeparator(char c){
+ bool Lexer::CheckSeparator(char c){
 	// Check if char is a separator //
 	char *temp;
 	temp = find(charSeparator, charSeparator + 13, c);
@@ -254,6 +316,7 @@ bool Lexer::CheckSeparator(char c){
 	else if (c == '$'){
 		char ahead = f.get();
 		if (ahead == '$'){
+			f.unget();
 			isSeparator = 1;
 			return 1;
 		}
@@ -271,58 +334,80 @@ bool Lexer::CheckSeparator(char c){
 // CheckOperator checks if the char is an operator. If it is, it triggers for the output //
 bool Lexer::CheckOperator(char c){
 
-		// Check if char is a operator //
-		char *temp;
-		temp = find(Operator, Operator + 7, c);
-		if (temp != Operator + 7){
-			isOperator = 1;
-			return 1;
-		}
+	// Check if char is a operator //
+	char *temp;
+	temp = find(Operator, Operator + 7, c);
+	if (temp != Operator + 7){
+		isOperator = 1;
+		return 1;
+	}
 
-		// However, check if char is '!' in the case that we have an "!=" operator //
-		else if (c == '!'){
-			isOperator = 1;
-			return 1;
-		}
+	// However, check if char is '!' in the case that we have an "!=" operator //
+	else if (c == '!'){
+		isOperator = 1;
+		return 1;
+	}
 
-		else return 0;
-		temp = NULL;
+	else return 0;
+	temp = NULL;
 }
 
 // OutputSeparator is triggered when the char taken in is a separator //
-void Lexer::OutputSeparator(){
+/*void Lexer::OutputSeparator(){
 	string temp; // A temporary string to display the blank spacing that was used //
 	char *space;
 
 	/*if (tokenBU == '\t') temp = "\\t";
 	else if (tokenBU == '\n'){
-		temp = "\\n";
-		lineCounter++;
-		charCounter = 1;
+	temp = "\\n";
+	lineCounter++;
+	charCounter = 1;
 	}
 	else if (tokenBU == ' ') temp = "\' \'";
-	else if (tokenBU == '$') temp = "$$";*/
+	else if (tokenBU == '$') temp = "$$";
 	space = find(Spaces, Spaces + 3, token);
 	if (space != Spaces + 3){
-		tokenBU = NULL;
-		State = 1;
-		isSeparator = 0;
-		lexeme = "";
+	tokenBU = NULL;
+	State = 1;
+	isSeparator = 0;
+	lexeme = "";
 	}
 	else if (tokenBU == '$') temp = "$$";
 	else temp = tokenBU;
 
 	if (tokenBU != NULL){
-		cout << left << setw(12) << "SEPARATOR" << left << setw(7) << temp << endl;
+	cout << left << setw(12) << "SEPARATOR" << left << setw(7) << temp << endl;
+	tokenBU = NULL;
+	State = 1;
+	isSeparator = 0;
+	lexeme = "";
+	}
+	}*/
+string Lexer::OutputSeparator(){
+	string retTemp;
+	retTemp += tokenBU;
+	char *space;
+	space = find(Spaces, Spaces + 3, tokenBU);
+	if (space != Spaces + 3){
 		tokenBU = NULL;
-		State = 1;
-		isSeparator = 0;
-		lexeme = "";
+		return retTemp;
+	}
+	else if (token == '$'){
+		char temp = f.get();
+		if (temp == '$'){
+			retTemp += temp;
+		}
+		else f.unget();
+		return retTemp;
+	}
+	else {
+		return retTemp;
 	}
 }
 
+
 // OutputOperator is triggered when the char taken in is an operator //
-void Lexer::OutputOperator(){
+/*void Lexer::OutputOperator(){
 	// First check if the char belongs to a special operator //
 	if (tokenBU == '!' || tokenBU == '='){
 		char temp = f.get(); // Get the character ahead for checking if "!=" or "=="//
@@ -360,7 +445,56 @@ void Lexer::OutputOperator(){
 				isOperator = 0;
 				lexeme = "";
 			}
+		}*/
+string Lexer::OutputOperator(){
+	string retTemp = "";
+	retTemp += tokenBU; // The char that will be returned //
+	// First check if the char belongs to a special operator //
+	if (tokenBU == '!' || tokenBU == '='){
+		char temp = f.get(); // Get the character ahead for checking if "!=" or "=="//
+		if (temp == '='){
+			retTemp += temp;
+			tokenBU = NULL;
+			State = 1;
+			lexeme = "";
+			return retTemp;
 		}
+
+		// Operator is a regular operator //
+		else{
+			f.unget(); // Must unget the f.get() we did earlier to check for "!=" and "==" //
+			if (tokenBU == '!'){ // If the char was '!' but was not part of "!=" then we throw an error //
+				lexeme = "";
+				State = 0;
+				retTemp = "\0";
+				return retTemp;
+			}
+			// Operator '=' by itself //
+			if (tokenBU == '='){
+				retTemp = tokenBU;
+				tokenBU = NULL;
+				State = 1;
+				lexeme = "";
+				return retTemp;
+			}
+			else{
+				retTemp = tokenBU;
+				tokenBU = NULL;
+				State = 1;
+				lexeme = "";
+				return retTemp;
+			}
+		}
+	}
+	// Operator is a regular //
+	else{
+		retTemp = tokenBU;
+		tokenBU = NULL;
+		State = 1;
+		lexeme = "";
+		return retTemp;
+	}
+}
 
 // isKeyword checks if the token is a keyword before marking it as identifier //
 bool Lexer::isKeyword(string lex){
@@ -372,4 +506,9 @@ bool Lexer::isKeyword(string lex){
 		return 1;
 	}
 	else return 0;
+}
+
+bool Lexer::isEOF(){
+	if (token == -1) return true;
+	else return false;
 }
