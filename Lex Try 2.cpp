@@ -82,9 +82,7 @@ int main(){
 	return 0;
 }
 
-/**********************************************************************
-Functions
-**********************************************************************/
+// Constructs the DFSM table //
 void Lexer::constructTable(){
 	vector<int> tableRow(5);
 
@@ -251,22 +249,18 @@ string Lexer::outputState(int n){
 		State = 0;
 		return lexeme;
 	case(4) : if (isKeyword(lexeme)) break;
-		//cout << left << setw(12) << "IDENTIFIER" << left << setw(7) << lexeme << endl;
 		tokReady = 1;
 		isID = 1;
-	//	lexeme = "";
 		State = 1;
 		return lexeme;
-	case(7) : //cout << left << setw(12) << "INTEGER" << left << setw(7) << lexeme << endl;
+	case(7) :
 		tokReady = 1;
 		isInt = 1;
-	//	lexeme = "";
 		State = 1;
 		return lexeme;
-	case(8) : //cout << left << setw(12) << "REAL" << left << setw(7) << lexeme << endl;
+	case(8) :
 		tokReady = 1;
 		isReal = 1;
-		//lexeme = "";
 		State = 1;
 		return lexeme;
 	}
@@ -298,14 +292,24 @@ void Lexer::Parse(string theToken){
 	}
 
 	cout << left << setw(12) << tokenID << left << setw(7) << theToken << endl;
-	isID = isInt = isReal = 0;
+	isID = tokReady = isInt = isReal = 0;
 	lexeme = "";
 	State = 1;
-	tokReady = 0;
 }
 
 // CheckSeparator checks if the char is an separator. If it is, it triggers for the output //
  bool Lexer::CheckSeparator(char c){
+	 // error catch if tokenBU is '.' //
+	 if (tokenBU == '.'){
+		 State = 0;
+		 return 0;
+	 }
+	 // Line counter incrementer //
+	 if (c == '\n'){
+		 lineCounter++;
+		 charCounter = 1;
+	 }
+
 	// Check if char is a separator //
 	char *temp;
 	temp = find(charSeparator, charSeparator + 13, c);
@@ -353,36 +357,6 @@ bool Lexer::CheckOperator(char c){
 }
 
 // OutputSeparator is triggered when the char taken in is a separator //
-/*void Lexer::OutputSeparator(){
-	string temp; // A temporary string to display the blank spacing that was used //
-	char *space;
-
-	/*if (tokenBU == '\t') temp = "\\t";
-	else if (tokenBU == '\n'){
-	temp = "\\n";
-	lineCounter++;
-	charCounter = 1;
-	}
-	else if (tokenBU == ' ') temp = "\' \'";
-	else if (tokenBU == '$') temp = "$$";
-	space = find(Spaces, Spaces + 3, token);
-	if (space != Spaces + 3){
-	tokenBU = NULL;
-	State = 1;
-	isSeparator = 0;
-	lexeme = "";
-	}
-	else if (tokenBU == '$') temp = "$$";
-	else temp = tokenBU;
-
-	if (tokenBU != NULL){
-	cout << left << setw(12) << "SEPARATOR" << left << setw(7) << temp << endl;
-	tokenBU = NULL;
-	State = 1;
-	isSeparator = 0;
-	lexeme = "";
-	}
-	}*/
 string Lexer::OutputSeparator(){
 	string retTemp;
 	retTemp += tokenBU;
@@ -407,45 +381,6 @@ string Lexer::OutputSeparator(){
 
 
 // OutputOperator is triggered when the char taken in is an operator //
-/*void Lexer::OutputOperator(){
-	// First check if the char belongs to a special operator //
-	if (tokenBU == '!' || tokenBU == '='){
-		char temp = f.get(); // Get the character ahead for checking if "!=" or "=="//
-		if (temp == '='){
-			cout << left << setw(12) << "OPERATOR" << tokenBU << temp << endl;
-			tokenBU = NULL;
-			State = 1;
-			isOperator = 0;
-			lexeme = "";
-		}
-
-		// Operator is a regular operator //
-		else{
-			f.unget(); // Must unget the f.get() we did earlier to check for "!=" and "==" //
-			if (tokenBU == '!'){ // If the char was '!' but was not part of "!=" then we throw an error //
-				cout << "Unidentified token at line: " << lineCounter << " char: " << charCounter << endl;
-				lexeme = "";
-				State = 0;
-			}
-			// Operator '=' by itself //
-			if (tokenBU == '='){
-				cout << left << setw(12) << "OPERATOR" << left << setw(7) << tokenBU << endl;
-				tokenBU = NULL;
-				State = 1;
-				isOperator = 0;
-				lexeme = "";
-			}
-		}
-	}
-			// Operator is a regular //
-			else{
-				cout << left << setw(12) << "OPERATOR" << left << setw(7) << tokenBU << endl;
-				tokenBU = NULL;
-				State = 1;
-				isOperator = 0;
-				lexeme = "";
-			}
-		}*/
 string Lexer::OutputOperator(){
 	string retTemp = "";
 	retTemp += tokenBU; // The char that will be returned //
@@ -509,6 +444,6 @@ bool Lexer::isKeyword(string lex){
 }
 
 bool Lexer::isEOF(){
-	if (token == -1) return true;
+	if (token == -1 || State == 0) return true;
 	else return false;
 }
