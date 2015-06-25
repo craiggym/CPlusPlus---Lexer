@@ -185,9 +185,10 @@ void Lexer::GetTxtFile(ifstream &file){
 
 // Tokenizes the text file //
 string Lexer::GetToken(){
-	int col;
-	string retToken;
+	int col; // col will act as input for the DFSM //
+	string retToken; // retToken is a token of what this function will return //
 
+	// While file is not at end and state is not at 0 //
 	while (!f.eof() && State != 0){
 		if (isSeparator == 1){
 			retToken = OutputSeparator();
@@ -199,7 +200,6 @@ string Lexer::GetToken(){
 		}
 
 		token = f.get();
-		charCounter++;
 
 		col = charToCol(token);
 
@@ -207,15 +207,6 @@ string Lexer::GetToken(){
 		retToken = outputState(State);
 		if(tokReady != 1) lexeme += tokenBU = token;
 		else tokenBU = token;
-
-	/*	if (isSeparator == 1){
-			tokReady = 1;
-			retToken = lexeme;
-		}
-		else if (isOperator == 1) {
-			tokReady = 1;
-			retToken = lexeme;
-		}*/
 
 		if (token == -1 && lexeme.size() == 0){
 			cout << "Unidentified token at line: " << lineCounter << " char: " << charCounter << endl;
@@ -295,6 +286,7 @@ void Lexer::Parse(string theToken){
 	isID = tokReady = isInt = isReal = 0;
 	lexeme = "";
 	State = 1;
+	charCounter++;
 }
 
 // CheckSeparator checks if the char is an separator. If it is, it triggers for the output //
