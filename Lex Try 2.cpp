@@ -34,7 +34,7 @@ string Keywords[12] = { "if", "fi", "else", "return", "write", "read", "while", 
 
 class Lexer {
 private:
-	int lineCounter = 1, charCounter = 0;
+	int lineCounter = 1, charCounter = 1;
 
 	vector<vector<int>> Table;
 	ifstream f;
@@ -43,8 +43,9 @@ private:
 	char tokenBU;
 	string lexeme;
 	char token;
+	string tokenID;
 
-	bool isSeparator, isOperator, isID, isInt, isReal, tokReady;
+	bool isSeparator, isOperator, isID, isInt, isReal, isKey, tokReady;
 
 public:
 	Lexer(){
@@ -57,11 +58,14 @@ public:
 	void displayTable();
 	void GetTxtFile(ifstream &file);
 	void Parse(string theToken);
-	string GetToken();
+	void retError();
+	void retError(string predict);
 	int charToCol(char c);
 	string outputState(int n);
 	string OutputSeparator();
 	string OutputOperator();
+	string getTokenID();
+	string GetToken();
 	bool CheckSeparator(char c);
 	bool CheckOperator(char c);
 	bool isKeyword(string lex);
@@ -71,14 +75,13 @@ public:
 /**********************************************************************
 Program starts here
 **********************************************************************/
-int main(){
+int main2(){
 	cout << "Program: Lex\nProgrammer: Craig Marroquin\nClass: CPSC 323 Summer 2015\n\n" << endl;
 	Lexer RAT15SU; // Takes a file from user input //
-	while (!RAT15SU.isEOF()){
-		RAT15SU.Parse(RAT15SU.GetToken());
-	}
+	//while (!RAT15SU.isEOF()){
+	//	RAT15SU.Parse(RAT15SU.GetToken());
+	//}
 
-	system("Pause");
 	return 0;
 }
 
@@ -209,10 +212,11 @@ string Lexer::GetToken(){
 		else tokenBU = token;
 
 		if (token == -1 && lexeme.size() == 0){
-			cout << "Unidentified token at line: " << lineCounter << " char: " << charCounter << endl;
+			retError();
 			retToken = "";
 			break;
 		}
+		charCounter++;
 		if (tokReady == 1) break; // The token is ready to return //
 	}
 	return retToken;
@@ -234,12 +238,12 @@ int Lexer::charToCol(char c){
 // outputState takes in a number from the results of a DFSM lookup and outputs the token and lexeme //
 string Lexer::outputState(int n){
 	switch (n){
-	case(0) : cout << "Unidentified token at line: " << lineCounter << " char: " << charCounter << endl;
+	case(0) : retError();
 		tokReady = 1;
 		lexeme = "\0";
 		State = 0;
 		return lexeme;
-	case(4) : if (isKeyword(lexeme)) break;
+	case(4) : if (isKeyword(lexeme)) return lexeme;
 		tokReady = 1;
 		isID = 1;
 		State = 1;
@@ -260,11 +264,11 @@ string Lexer::outputState(int n){
 
 // DisplayToken gets passed a string when a full token has been reached (determined by a separator or operator)//
 void Lexer::Parse(string theToken){
-	string tokenID;
 	if (theToken == "\0") return;
 	else if (isID == 1) tokenID = "IDENTIFIER";
 	else if (isInt == 1) tokenID = "INTEGER";
 	else if (isReal == 1) tokenID = "REAL";
+	else if (isKey == 1) tokenID = "KEYWORD";
 	else if (isSeparator == 1) {
 		if (tokenBU == NULL){
 			isSeparator = 0;
@@ -282,11 +286,10 @@ void Lexer::Parse(string theToken){
 		isOperator = 0;
 	}
 
-	cout << left << setw(12) << tokenID << left << setw(7) << theToken << endl;
-	isID = tokReady = isInt = isReal = 0;
+	//cout << left << setw(12) << tokenID << left << setw(7) << theToken << endl;
+	isID = tokReady = isInt = isReal = isKey = 0;
 	lexeme = "";
 	State = 1;
-	charCounter++;
 }
 
 // CheckSeparator checks if the char is an separator. If it is, it triggers for the output //
@@ -311,14 +314,23 @@ void Lexer::Parse(string theToken){
 	}
 	else if (c == '$'){
 		char ahead = f.get();
-		if (ahead == '$'){
-			f.unget();
+		char lookAhead = f.get();
+		char *spacer = find(charSeparator, charSeparator + 13, lookAhead);
+
+		if (ahead == '$' && (spacer != (charSeparator + 13))){
+			charCounter += 2;
+			tokenBU = '$';
 			isSeparator = 1;
 			return 1;
 		}
 		else{
-			State = 0;
-			return 0;
+			f.unget();
+			charCounter++;
+			if (ahead == '$') lexeme = "$$";
+			else lexeme = "$";
+			retError();
+			//State = 0;
+			//return 0;
 		}
 	}
 	else {
@@ -359,12 +371,8 @@ string Lexer::OutputSeparator(){
 		return retTemp;
 	}
 	else if (token == '$'){
-		char temp = f.get();
-		if (temp == '$'){
-			retTemp += temp;
-		}
-		else f.unget();
-		return retTemp;
+			retTemp += "$";
+			return retTemp;
 	}
 	else {
 		return retTemp;
@@ -405,6 +413,7 @@ string Lexer::OutputOperator(){
 				return retTemp;
 			}
 			else{
+				f.unget();
 				retTemp = tokenBU;
 				tokenBU = NULL;
 				State = 1;
@@ -427,9 +436,11 @@ string Lexer::OutputOperator(){
 bool Lexer::isKeyword(string lex){
 	string *temp = find(Keywords, Keywords + 12, lex);
 	if (temp != Keywords + 12){
-		cout << left << setw(12) << "KEYWORD" << left << setw(7) << lex << endl;
-		lexeme = "";
+		//cout << left << setw(12) << "KEYWORD" << left << setw(7) << lex << endl;
+		lexeme = lex;
+		tokReady = 1;
 		State = 1;
+		isKey = 1;
 		return 1;
 	}
 	else return 0;
@@ -438,4 +449,30 @@ bool Lexer::isKeyword(string lex){
 bool Lexer::isEOF(){
 	if (token == -1 || State == 0) return true;
 	else return false;
+}
+
+string Lexer::getTokenID(){
+	return tokenID;
+}
+
+void Lexer::retError(){
+	char getter;
+	getter = f.get();
+	while (true)
+	{
+		if (getter == ' ' || getter == '\n' || getter == '\t' || getter == '[' || getter == ']' || getter == '(' || getter == ')' || getter == '{' ||
+			getter == '}' || getter == -1) break;
+		lexeme += getter;
+		getter = f.get();
+	}
+
+	cout << "\n\nUnidentified token: " << lexeme << endl;
+	system("PAUSE");
+	exit(1);
+}
+void Lexer::retError(string predict){
+	cout << "\n\nUnexpected token at line: " << lineCounter << " char: " << charCounter;
+	cout << " Expected " << predict <<  endl;
+	system("PAUSE");
+	exit(1);
 }
