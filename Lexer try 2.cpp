@@ -44,7 +44,7 @@ private:
 	string lexeme;
 	char token;
 	string tokenID;
-
+	string lexBU;
 	bool isSeparator, isOperator, isID, isInt, isReal, isKey, tokReady;
 
 public:
@@ -193,6 +193,7 @@ string Lexer::GetToken(){
 
 	// While file is not at end and state is not at 0 //
 	while (!f.eof() && State != 0){
+		lexBU = lexeme;
 		if (isSeparator == 1){
 			retToken = OutputSeparator();
 			return retToken;
@@ -219,6 +220,7 @@ string Lexer::GetToken(){
 		charCounter++;
 		if (tokReady == 1) break; // The token is ready to return //
 	}
+
 	return retToken;
 }
 
@@ -264,6 +266,7 @@ string Lexer::outputState(int n){
 
 // DisplayToken gets passed a string when a full token has been reached (determined by a separator or operator)//
 void Lexer::Parse(string theToken){
+	lexBU = theToken;
 	if (theToken == "\0") return;
 	else if (isID == 1) tokenID = "IDENTIFIER";
 	else if (isInt == 1) tokenID = "INTEGER";
@@ -320,6 +323,7 @@ void Lexer::Parse(string theToken){
 		if (ahead == '$' && (spacer != (charSeparator + 13))){
 			charCounter += 2;
 			tokenBU = '$';
+			lexeme = "$";
 			isSeparator = 1;
 			return 1;
 		}
