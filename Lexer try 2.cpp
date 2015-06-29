@@ -59,8 +59,9 @@ public:
 	void GetTxtFile(ifstream &file);
 	void Parse(string theToken);
 	void retError();
-	void retError(string predict);
 	int charToCol(char c);
+	int LineCount();
+	int CharCount();
 	string outputState(int n);
 	string OutputSeparator();
 	string OutputOperator();
@@ -220,7 +221,10 @@ string Lexer::GetToken(){
 		charCounter++;
 		if (tokReady == 1) break; // The token is ready to return //
 	}
-
+	if (retToken == "\n"){
+		lineCounter++;
+		charCounter == 1;
+	}
 	return retToken;
 }
 
@@ -317,11 +321,12 @@ void Lexer::Parse(string theToken){
 	}
 	else if (c == '$'){
 		char ahead = f.get();
+		charCounter++;
 		char lookAhead = f.get();
+		charCounter++;
 		char *spacer = find(charSeparator, charSeparator + 13, lookAhead);
 
 		if (ahead == '$' && (spacer != (charSeparator + 13))){
-			charCounter += 2;
 			tokenBU = '$';
 			lexeme = "$";
 			isSeparator = 1;
@@ -329,7 +334,7 @@ void Lexer::Parse(string theToken){
 		}
 		else{
 			f.unget();
-			charCounter++;
+			charCounter--;
 			if (ahead == '$') lexeme = "$$";
 			else lexeme = "$";
 			retError();
@@ -474,9 +479,10 @@ void Lexer::retError(){
 	system("PAUSE");
 	exit(1);
 }
-void Lexer::retError(string predict){
-	cout << "\n\nUnexpected token at line: " << lineCounter << " char: " << charCounter;
-	cout << " Expected " << predict <<  endl;
-	system("PAUSE");
-	exit(1);
+
+int Lexer::LineCount(){
+	return lineCounter;
+}
+int Lexer::CharCount(){
+	return charCounter;
 }
