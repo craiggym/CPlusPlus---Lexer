@@ -26,7 +26,7 @@ using namespace std;
 
 //========================= LIBRARY ===================================//
 // Libray of special strings and characters needed for char comparison //
-char charSeparator[13] = {' ', '\t', '\n', ';', '{', '}', '[', ']', '(', ')', '.', ',', '\"' };
+char charSeparator[14] = {' ', '\t', '\n', ';', '{', '}', '[', ']', '(', ')', '.', ',', (char)-1, '\"' };
 char Operator[7] = { '=', '+', '-', '/', '*', '>', '<'};
 char Spaces[3] = { ' ', '\t', '\n' };
 string Keywords[12] = { "if", "fi", "else", "return", "write", "read", "while", "integer", "boolean", "real", "true", "false" };
@@ -168,7 +168,8 @@ void Lexer::GetTxtFile(ifstream &file){
 	cout << "Please input the directory where the source file resides.\nExample: C:\\Users\\Craig\\Downloads\\file.txt\n" << endl;
 	cout << "Destination: ";
 
-	getline(cin, fileDestination);
+	fileDestination = "c:\\users\\craigmarroquin\\desktop\\test 3.txt";
+	//getline(cin, fileDestination);
 	f.open(fileDestination, ios::in);
 
 	while (!f.is_open()){
@@ -194,7 +195,6 @@ string Lexer::GetToken(){
 
 	// While file is not at end and state is not at 0 //
 	while (!f.eof() && State != 0){
-		lexBU = lexeme;
 		if (isSeparator == 1){
 			retToken = OutputSeparator();
 			return retToken;
@@ -314,9 +314,10 @@ void Lexer::Parse(string theToken){
 
 	// Check if char is a separator //
 	char *temp;
-	temp = find(charSeparator, charSeparator + 13, c);
-	if (temp != charSeparator + 13){
+	temp = find(charSeparator, charSeparator + 14, c);
+	if (temp != charSeparator + 14){
 		isSeparator = 1;
+		tokenBU = c;
 		return 1;
 	}
 	else if (c == '$'){
@@ -324,22 +325,32 @@ void Lexer::Parse(string theToken){
 		charCounter++;
 		char lookAhead = f.get();
 		charCounter++;
-		char *spacer = find(charSeparator, charSeparator + 13, lookAhead);
+		char *spacer = find(charSeparator, charSeparator + 14, lookAhead);
+		
+		cout << c << ' ' << ahead << ' ' << (int)lookAhead << endl;
 
-		if (ahead == '$' && (spacer != (charSeparator + 13))){
+		if (ahead == '$' && (spacer != (charSeparator + 14))){
+			cout << "LookAhead within charSeparator!" <<endl;
 			tokenBU = '$';
-			lexeme = "$";
+			lexeme = "$$";
 			isSeparator = 1;
+			f.unget(); // for the lookahead
 			return 1;
 		}
 		else{
-			f.unget();
-			charCounter--;
-			if (ahead == '$') lexeme = "$$";
-			else lexeme = "$";
-			retError();
-			//State = 0;
-			//return 0;
+			f.unget(); // Go back from lookahead
+			if(ahead != '$'){
+				f.unget(); // Go back from ahead
+				lexeme = "$" + f.get();
+				retError();
+			}
+			else{
+				lexeme = "$$" + f.get();
+				f.unget();
+				retError();
+			}
+			State = 0;
+			return 0;
 		}
 	}
 	else {
@@ -374,6 +385,7 @@ string Lexer::OutputSeparator(){
 	string retTemp;
 	retTemp += tokenBU;
 	char *space;
+
 	space = find(Spaces, Spaces + 3, tokenBU);
 	if (space != Spaces + 3){
 		tokenBU = NULL;
@@ -470,12 +482,14 @@ void Lexer::retError(){
 	while (true)
 	{
 		if (getter == ' ' || getter == '\n' || getter == '\t' || getter == '[' || getter == ']' || getter == '(' || getter == ')' || getter == '{' ||
-			getter == '}' || getter == -1) break;
+			getter == '}' || getter == (char)-1) break;
+		cout << "getter: " << getter << " ascii: " << (int)getter << endl;
 		lexeme += getter;
 		getter = f.get();
 	}
 
 	cout << "\n\nUnidentified token: " << lexeme << endl;
+	cout << "See detailed results in the results.txt file where this exe file resides.\n" << endl;
 	system("PAUSE");
 	exit(1);
 }
