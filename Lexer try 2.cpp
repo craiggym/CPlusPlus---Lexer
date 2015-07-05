@@ -326,11 +326,8 @@ void Lexer::Parse(string theToken){
 		char lookAhead = f.get();
 		charCounter++;
 		char *spacer = find(charSeparator, charSeparator + 14, lookAhead);
-		
-		cout << c << ' ' << ahead << ' ' << (int)lookAhead << endl;
 
 		if (ahead == '$' && (spacer != (charSeparator + 14))){
-			cout << "LookAhead within charSeparator!" <<endl;
 			tokenBU = '$';
 			lexeme = "$$";
 			isSeparator = 1;
